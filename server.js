@@ -9,6 +9,8 @@ const app = express();
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || "http://localhost:5173",
+    "https://passeport-carriere-tkj9dx0zj-mrad-boops-projects.vercel.app",
+    "https://passeport-carriere.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
   ],
