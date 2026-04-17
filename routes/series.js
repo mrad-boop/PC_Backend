@@ -2,12 +2,29 @@ const router = require("express").Router();
 const db     = require("../db");
 const { auth, adminAuth } = require("../middleware/auth");
 
-// ── GET /api/series ── (public — séries sans questions)
+// ── GET /api/series ── (public — séries avec questions)
 router.get("/", async (req, res) => {
   try {
     const [series] = await db.query("SELECT * FROM series ORDER BY type, id");
-    res.json(series);
+    // Charger les questions pour chaque série
+    const result = await Promise.all(series.map(async (serie) => {
+      const [questions] = await db.query(
+        "SELECT * FROM questions WHERE serie_id = ? ORDER BY position",
+        [serie.id]
+      );
+      const qs = questions.map(q => ({
+        id:           q.id,
+        text:         q.text,
+        image:        q.image,
+        options:      [q.option_a, q.option_b, q.option_c, q.option_d],
+        correct:      q.correct,
+        isImageChoice: !!q.is_image_choice,
+      }));
+      return { ...serie, questions: qs };
+    }));
+    res.json(result);
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Erreur serveur." });
   }
 });
