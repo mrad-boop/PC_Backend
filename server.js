@@ -25,6 +25,7 @@ app.use("/api/series",   require("./routes/series"));
 app.use("/api/attempts", require("./routes/attempts"));
 app.use("/api/users",    require("./routes/users"));
 app.use("/api/packs",    require("./routes/packs"));
+app.use("/api/cv",       require("./routes/cv"));
 
 // Route config séparée
 const packsRouter = require("./routes/packs");

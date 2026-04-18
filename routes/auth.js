@@ -5,7 +5,7 @@ const db      = require("../db");
 
 const sign = (user) =>
   jwt.sign(
-    { id: user.id, email: user.email, role: user.role || "user", plan: user.plan },
+    { id: user.id, email: user.email, role: user.role || "user", plan: user.plan, rank: user.rank || "free" },
     process.env.JWT_SECRET,
     { expiresIn: "30d" }
   );
@@ -22,10 +22,10 @@ router.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      "INSERT INTO users (nom, email, password, pays, plan, status, joined) VALUES (?,?,?,?,?,?,CURDATE())",
-      [nom, email, hash, pays || "CA", "free", "actif"]
+      "INSERT INTO users (nom, email, password, pays, plan, `rank`, status, joined) VALUES (?,?,?,?,?,?,?,CURDATE())",
+      [nom, email, hash, pays || "CA", "free", "free", "actif"]
     );
-    const user = { id: result.insertId, nom, email, pays: pays || "CA", plan: "free", status: "actif", role: "user" };
+    const user = { id: result.insertId, nom, email, pays: pays || "CA", plan: "free", rank: "free", status: "actif", role: "user" };
     res.status(201).json({ token: sign(user), user });
   } catch (e) {
     console.error(e);
@@ -40,8 +40,8 @@ router.post("/login", async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis." });
 
     // Admin hardcodé
-    if (email === "admin@launchpad.ca" && password === process.env.ADMIN_PASSWORD) {
-      const admin = { id: 0, nom: "Admin", email, plan: "premium", status: "actif", role: "admin" };
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+      const admin = { id: 0, nom: "Admin", email, plan: "premium", rank: "gold", status: "actif", role: "admin" };
       return res.json({ token: sign(admin), user: admin });
     }
 
@@ -54,7 +54,10 @@ router.post("/login", async (req, res) => {
     if (!ok) return res.status(401).json({ error: "Identifiants incorrects." });
 
     await db.query("UPDATE users SET last_login = NOW() WHERE id = ?", [u.id]);
-    const user = { id: u.id, nom: u.nom, email: u.email, pays: u.pays, plan: u.plan, status: u.status, role: "user" };
+    const user = {
+      id: u.id, nom: u.nom, email: u.email, pays: u.pays,
+      plan: u.plan, rank: u.rank || "free", status: u.status, role: "user"
+    };
     res.json({ token: sign(user), user });
   } catch (e) {
     console.error(e);
@@ -66,7 +69,7 @@ router.post("/login", async (req, res) => {
 router.get("/me", require("../middleware/auth").auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT id, nom, email, pays, plan, status, photo, adresse, tel, whatsapp, joined, last_login FROM users WHERE id = ?",
+      "SELECT id, nom, email, pays, plan, `rank`, status, photo, adresse, tel, whatsapp, joined, last_login FROM users WHERE id = ?",
       [req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: "Utilisateur introuvable." });
