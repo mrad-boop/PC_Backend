@@ -25,22 +25,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ── PUT /api/packs/:id ── (admin)
-router.put("/:id", adminAuth, async (req, res) => {
-  try {
-    const { name, price, acces, color, ribbon, highlight, bonus, features } = req.body;
-    await db.query(
-      "UPDATE packs SET name=?, price=?, acces=?, color=?, ribbon=?, highlight=?, bonus=?, features=? WHERE id=?",
-      [name, price, acces, color, ribbon, highlight ? 1 : 0, bonus, JSON.stringify(features || []), req.params.id]
-    );
-    res.json({ message: "Pack mis à jour." });
-  } catch (e) {
-    console.error("PUT /api/packs/:id error:", e);
-    res.status(500).json({ error: "Erreur serveur." });
-  }
-});
-
-// ── GET /api/packs/config ── (public — config landing)
+// ── GET /api/packs/config ── AVANT /:id pour éviter le conflit
 router.get("/config", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT cle, valeur FROM site_config");
@@ -53,7 +38,7 @@ router.get("/config", async (req, res) => {
   }
 });
 
-// ── PUT /api/packs/config ── (admin — mettre à jour les clés)
+// ── PUT /api/packs/config ── AVANT /:id pour éviter le conflit
 router.put("/config", adminAuth, async (req, res) => {
   try {
     const entries = Object.entries(req.body);
@@ -67,6 +52,21 @@ router.put("/config", adminAuth, async (req, res) => {
     res.json({ message: "Configuration mise à jour.", count: entries.length });
   } catch (e) {
     console.error("PUT /api/packs/config error:", e);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+});
+
+// ── PUT /api/packs/:id ── APRÈS /config
+router.put("/:id", adminAuth, async (req, res) => {
+  try {
+    const { name, price, acces, color, ribbon, highlight, bonus, features } = req.body;
+    await db.query(
+      "UPDATE packs SET name=?, price=?, acces=?, color=?, ribbon=?, highlight=?, bonus=?, features=? WHERE id=?",
+      [name, price, acces, color, ribbon, highlight ? 1 : 0, bonus, JSON.stringify(features || []), req.params.id]
+    );
+    res.json({ message: "Pack mis à jour." });
+  } catch (e) {
+    console.error("PUT /api/packs/:id error:", e);
     res.status(500).json({ error: "Erreur serveur." });
   }
 });
