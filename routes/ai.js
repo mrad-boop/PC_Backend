@@ -1,6 +1,7 @@
-const router  = require("express").Router();
+const router   = require("express").Router();
 const { auth } = require("../middleware/auth");
 const mammoth  = require("mammoth");
+const pdfParse = require("pdf-parse");
 
 const OR_API = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL  = "google/gemma-4-26b-a4b-it:free";
@@ -38,7 +39,6 @@ router.post("/parse-cv", auth, async (req, res) => {
       const result = await mammoth.extractRawText({ buffer: buf });
       text = result.value;
     } else if (mimeType === "application/pdf") {
-      const pdfParse = require("pdf-parse");
       const buf = Buffer.from(fileBase64, "base64");
       const result = await pdfParse(buf);
       text = result.text;
