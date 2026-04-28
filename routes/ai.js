@@ -1,7 +1,6 @@
 const router   = require("express").Router();
 const { auth } = require("../middleware/auth");
 const mammoth  = require("mammoth");
-const pdfParse = require("pdf-parse");
 
 const OR_API = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL  = "google/gemma-4-26b-a4b-it:free";
@@ -15,13 +14,20 @@ const callAI = async (messages) => {
     },
     body: JSON.stringify({ model: MODEL, messages, max_tokens: 1500 }),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter error: ${res.status} — ${err}`);
-  }
+  if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
   const data = await res.json();
   return data.choices?.[0]?.message?.content || "";
 };
+
+const extractPdfText = (buf) => new Promise((resolve, reject) => {
+  const { PdfReader } = require("pdfreader");
+  const lines = [];
+  new PdfReader().parseBuffer(buf, (err, item) => {
+    if (err) reject(err);
+    else if (!item) resolve(lines.join(" "));
+    else if (item.text) lines.push(item.text);
+  });
+});
 
 const CV_PROMPT = `Analyse ce CV et extrais les informations en JSON strict sans markdown.
 Retourne UNIQUEMENT ce JSON valide :
@@ -40,8 +46,7 @@ router.post("/parse-cv", auth, async (req, res) => {
       text = result.value;
     } else if (mimeType === "application/pdf") {
       const buf = Buffer.from(fileBase64, "base64");
-      const result = await pdfParse(buf);
-      text = result.text;
+      text = await extractPdfText(buf);
     } else {
       return res.status(400).json({ error: "Format non supporte. PDF ou Word uniquement." });
     }
