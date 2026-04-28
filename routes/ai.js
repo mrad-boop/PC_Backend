@@ -2,30 +2,30 @@ const router  = require("express").Router();
 const { auth } = require("../middleware/auth");
 const mammoth  = require("mammoth");
 
-const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL    = "llama-3.1-8b-instant";
+const OR_API = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL  = "google/gemma-4-26b-a4b-it:free";
 
-const callGroq = async (messages) => {
-  const res = await fetch(GROQ_API, {
+const callAI = async (messages) => {
+  const res = await fetch(OR_API, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
     },
     body: JSON.stringify({ model: MODEL, messages, max_tokens: 1500 }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Groq error: ${res.status} — ${err}`);
+    throw new Error(`OpenRouter error: ${res.status} — ${err}`);
   }
   const data = await res.json();
   return data.choices?.[0]?.message?.content || "";
 };
 
-const CV_PROMPT = `Analyse ce CV et extrais les informations en JSON strict (sans markdown, sans commentaire).
-Retourne UNIQUEMENT ce JSON :
+const CV_PROMPT = `Analyse ce CV et extrais les informations en JSON strict sans markdown.
+Retourne UNIQUEMENT ce JSON valide :
 {"nom":"","prenom":"","email":"","telephone":"","adresse":"","titre":"","resume":"","competences":"","certifications":"","references":"","langues":[{"langue":"","niveau":""}],"experiences":[{"poste":"","entreprise":"","lieu":"","debutMois":"","debutAnnee":"","finMois":"","finAnnee":"","taches":[""]}],"formations":[{"diplome":"","etablissement":"","lieu":"","mois":"","annee":""}]}
-Si un champ est absent, laisse-le vide. Pour les listes, inclus tous les elements trouves.`;
+Champ absent = laisser vide.`;
 
 router.post("/parse-cv", auth, async (req, res) => {
   try {
@@ -45,9 +45,9 @@ router.post("/parse-cv", auth, async (req, res) => {
     } else {
       return res.status(400).json({ error: "Format non supporte. PDF ou Word uniquement." });
     }
-    const reply = await callGroq([
-      { role: "system", content: "Tu es un extracteur de CV. Retourne uniquement du JSON valide." },
-      { role: "user", content: `Voici le texte du CV:\n\n${text}\n\n${CV_PROMPT}` }
+    const reply = await callAI([
+      { role: "system", content: "Tu es un extracteur de CV. Retourne uniquement du JSON valide sans markdown." },
+      { role: "user", content: `CV:\n\n${text}\n\n${CV_PROMPT}` }
     ]);
     const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
     res.json(parsed);
@@ -61,13 +61,13 @@ router.post("/lettre", auth, async (req, res) => {
   try {
     const { poste, entreprise, descPoste, cvText, ton, langue, user } = req.body;
     if (!poste?.trim()) return res.status(400).json({ error: "Poste obligatoire." });
-    const prompt = `Tu es un expert RH. Redige une lettre de motivation ${langue==="fr"?"en francais":"en anglais"} avec un ton ${ton}.
+    const prompt = `Redige une lettre de motivation ${langue==="fr"?"en francais":"en anglais"} avec un ton ${ton}.
 Candidat: ${user?.nom||""}, email: ${user?.email||""}, pays: ${user?.pays||""}
-${cvText?`CV du candidat:\n${cvText}\n`:""}
+${cvText?`CV:\n${cvText}\n`:""}
 Poste: ${poste}${entreprise?`, Entreprise: ${entreprise}`:""}
-${descPoste?`Description du poste:\n${descPoste}`:""}
-Instructions: 3-4 paragraphes. Reponds UNIQUEMENT avec la lettre, sans commentaire.`;
-    const lettre = await callGroq([
+${descPoste?`Description:\n${descPoste}`:""}
+3-4 paragraphes. Reponds UNIQUEMENT avec la lettre sans commentaire.`;
+    const lettre = await callAI([
       { role: "system", content: "Tu es un expert RH specialise dans l'immigration canadienne." },
       { role: "user", content: prompt }
     ]);
