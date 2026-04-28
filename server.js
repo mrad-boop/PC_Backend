@@ -17,7 +17,7 @@ app.use(cors({
   ],
   credentials: true,
 }));
-app.use(express.json({ limit: "20mb" })); // 20mb pour les images base64
+app.use(express.json({ limit: "20mb" }));
 
 // ── Routes ──
 app.use("/api/auth",     require("./routes/auth"));
@@ -26,14 +26,15 @@ app.use("/api/attempts", require("./routes/attempts"));
 app.use("/api/users",    require("./routes/users"));
 app.use("/api/packs",    require("./routes/packs"));
 app.use("/api/cv",       require("./routes/cv"));
+app.use("/api/ai",       require("./routes/ai"));      // ← nouveau
 
 // Route config séparée
 const packsRouter = require("./routes/packs");
-app.get( "/api/config",     (req, res, next) => { req.url = "/config"; packsRouter(req, res, next); });
-app.put( "/api/config",     (req, res, next) => { req.url = "/config"; packsRouter(req, res, next); });
+app.get("/api/config", (req, res, next) => { req.url = "/config"; packsRouter(req, res, next); });
+app.put("/api/config", (req, res, next) => { req.url = "/config"; packsRouter(req, res, next); });
 
 // ── Health check ──
-app.get("/", (req, res) => res.json({ status: "ok", app: "Passeport Carrière API", version: "1.0.0" }));
+app.get("/",       (req, res) => res.json({ status: "ok", app: "Passeport Carrière API", version: "1.0.0" }));
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // ── Démarrage ──
