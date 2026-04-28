@@ -14,7 +14,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.12.0",
-    "mysql2": "^3.9.7"
+    "mysql2": "^3.9.7",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
