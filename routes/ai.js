@@ -3,7 +3,7 @@ const { auth } = require("../middleware/auth");
 const mammoth  = require("mammoth");
 
 const OR_API = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL  = "google/gemma-4-26b-a4b-it:free";
+const MODEL  = "meta-llama/llama-4-scout:free";
 
 const callAI = async (messages) => {
   const res = await fetch(OR_API, {
